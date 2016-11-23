@@ -1,0 +1,31 @@
+{
+  "name": "gulp-vue2blade",
+  "version": "0.0.4",
+  "description": "Vue2.x template to laravel blade template.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mlinquan/gulp-vue2blade.git"
+  },
+  "keywords": [
+    "vue",
+    "laravel",
+    "blade",
+    "gulp"
+  ],
+  "author": "LinQuan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mlinquan/gulp-vue2blade/issues"
+  },
+  "homepage": "https://github.com/mlinquan/gulp-vue2blade#readme",
+  "dependencies": {
+    "gulp-util": "^3.0.7",
+    "object-assign": "^4.1.0",
+    "through2": "^2.0.1",
+    "vue-template-compiler": "^2.0.6"
+  }
+}
