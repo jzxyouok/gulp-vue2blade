@@ -157,7 +157,7 @@ function mackTemplate(vmast, tab) {
     }
 
     vmast.directives && vmast.directives.forEach(function(directive) {
-      console.log(directive)
+
     });
 
     if(vmast.if || vmast.for || vmast.else || tagStartNewLine) {
@@ -286,8 +286,9 @@ module.exports = function (opts) {
             return;
         }
 
-        if(!file.contents.toString()) {
-            console.log(file.path);
+        if (!file.contents.toString()) {
+            cb(null, null);
+            return;
         }
 
         if(file.path === path.join(__dirname, '../../' + opts.index)) {
@@ -317,8 +318,6 @@ module.exports = function (opts) {
         } catch (err) {
             console.log(err);
         }
-
-        console.log(file.path)
 
         cb(null, file);
     });
