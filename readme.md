@@ -1,10 +1,12 @@
-# gulp-vue2blade (Test version, Do not use in the production environment)
+# gulp-vue2blade
 
 
 ![NPM version](https://badge.fury.io/js/gulp-vue2blade.svg)
 ![Downloads](http://img.shields.io/npm/dm/gulp-vue2blade.svg?style=flat)
 
 Brecompile Vue template to Blade(Laravel PHP frame template engine) template.
+
+(Test version, Do not use in the production environment)
 
 ## Install
 ```js

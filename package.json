@@ -1,6 +1,6 @@
 {
   "name": "gulp-vue2blade",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "description": "Vue2.x template to laravel blade template.",
   "main": "index.js",
   "scripts": {
