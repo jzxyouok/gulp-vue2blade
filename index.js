@@ -9,6 +9,7 @@ var File = gutil.File;
 
 var through = require('through2');
 var objectAssign = require('object-assign');
+var js2php = require('js2php');
 
 function makeMap (
   str,
@@ -26,84 +27,23 @@ function makeMap (
 
 var funRE = /[a-zA-Z]+[a-zA-Z0-9_]*\s*\(\s*([^\(\)]+)\s*\)/;
 var isFunRE = /^\s*[a-zA-Z]+[a-zA-Z0-9_]*\s*\(\s*([^\(\)]+)\s*\)\s*$/;
-var strRE = /^\s*(\$|true|false|NaN|null|undefined|\d+|\'.+\')$/i;
-
+var strRE = /^\s*(\$|true|false|NaN|null|undefined|\d+|(\'|\").+\1)$/;
+var logicRE = /\s*(\!\={1,2}|\={2,3}|\>\=|\<\=|\>|\<|\&\&|\|\||\(|\))\s*/;
+var aritRE = /\s*((\+{1,2}|\-{1,2}|\*|\/|\%)|(\+|\-|\*|\/|\%)?\=)\s*/;
 
 function isFun(obj) {
   return !!isFunRE.test(obj);
 }
 
-var objRE = /^\s*\{[^\}]+\}\s*$/;
+var objRE = /\{([^\}]+)\}/;
+var isObjRE = /^\s*\{[^\}]+\}\s*$/;
 
 function isObj(obj) {
-  return !!objRE.test(obj);
+  return !!isObjRE.test(obj);
 }
 
-function toPHP(obj, isIf) {
-  var result = '';
-
-  //if
-  if(isIf) {
-    var if_obj = obj.split(/[\+\-\*\%\/\=\>\<\!\|\&\(\)\s]+/);
-    if_obj.forEach(function(ifi, i) {
-      if(strRE.test(ifi)) {
-        return;
-      }
-      var $ifi = toPHP(ifi);
-      if(ifi !== $ifi) {
-        obj = obj.split(ifi).join($ifi).replace(/\$+/g, '$');
-      }
-    });
-
-    return obj;
-  }
-
-  //string, boolean, number
-  if(strRE.test(obj)) {
-    return obj;
-  }
-
-  //function
-  var funs = obj.match(funRE);
-
-  if(funs && funs.length > 1) {
-    var params = funs[1].split(/\s*\,\s*/);
-    var $params = funs[1];
-    params.forEach(function(param) {
-      var $param = toPHP(param);
-      if(param !== $param) {
-        $params = $params.split(param).join($param).replace(/\$+/g, '$');
-      }
-    });
-    return obj.replace(funs[1], $params).replace(/this\./g, '');
-  }
-
-  //filters
-  var filters = obj.split(/\s*\|\s*/g);
-  var hasFilters = (filters.length > 1);
-  if(hasFilters) {
-    filters.forEach(function() {
-
-    });
-  }
-
-  //variable
-  if(/^[a-zA-Z]/.test(obj)) {
-    var obj_arr = obj.replace(/^\s+|\s+$/, '').replace('this.$parent.', '').split('.');
-    obj = '$' + obj_arr[0];
-    if(obj_arr.length > 1) {
-      for(var i=1;i<obj_arr.length;i++) {
-        if(obj_arr[i] === 'length') {
-          obj = 'count( ' + obj + ' )';
-          continue;
-        }
-        obj += '[\'' + obj_arr[i] + '\']';
-      }
-    }
-    return obj;
-  }
-
-  return result;
+function toPHP(code, isIf) {
+  return js2php(code).replace(/^<\?php\n|\;\n$/gm, '');
 }
 
 function mackTemplate(vmast, tab) {
@@ -135,29 +75,47 @@ function mackTemplate(vmast, tab) {
   if(vmast.tag !== 'template' && (isHTMLTag(vmast.tag) || isSVG(vmast.tag))) {
     //获取html属性，结果 ' name="abc" value="abc"'\
     for(var name in vmast.attrsMap) {
-
       var value = vmast.attrsMap[name];
-
-      name = name.replace(/^(v\-bind)?\:/, '');
 
       if(/^(v\-bind)?\:/.test(name)) {
         name = name.replace(/^(v\-bind)?\:/, '');
-        value = toPHP(value);
+        value = '{{ ' + toPHP(value) + ' }}';
       }
 
-      if(/^(\@|v\-on\:|v\-[^bind])/.test(name) || !isAttr(name) || isObj(value)) {
+      if(!/^data\-/.test(name) && (/^(\@|v\-on\:|v\-[^bind])/.test(name) || !isAttr(name) || isObj(value))) {
         continue;
-      }
-
-      if(isFun(value)) {
-        value = '{{ ' + value + ' }}';
       }
 
       attrs += ' ' + name + '="' + value + '"';
     }
 
     vmast.directives && vmast.directives.forEach(function(directive) {
-
+      if(directive.name !== 'bind') {
+        return;
+      }
+      var attr_objs = directive.value.match(/^\s*\{(.*)\}\s*$/);
+      if(attr_objs && attr_objs.length > 1) {
+        var strs = [];
+        var strs_len = -1;
+        var attr_objs_arr = attr_objs[1].replace(/(\'|\")(.+)\1/g, function(str) {
+          strs.push(str.replace(/^(\'|\")(.+)\1$/, "$2"));
+          strs_len++;
+          return '\'<LQ_&%$|@>'+ strs_len +'</@|$%&_LQ>\'';
+        }).split(/\s*\,\s*/);
+        attr_objs_arr.forEach(function(attr) {
+          var attr_i = attr.split(/\s*\:\s*/);
+          var name = attr_i[0];
+          var value = attr_i[1];
+          var str_key = Number(value.replace(/^\'\<LQ\_\&\%\$\|\@\>(\d+)\<\/\@\|\$\%\&\_LQ\>\'$/, "$1"));
+          var str_value = str_key >= 0 && strs[str_key];
+          if(str_value) {
+            value = str_value;
+          } else {
+            value = '{{ ' + toPHP(value) + ' }}';
+          }
+          attrs += ' ' + name + '="' + value + '"';
+        });
+      }
     });
 
     if(vmast.if || vmast.for || vmast.else || tagStartNewLine) {
@@ -201,7 +159,8 @@ function mackTemplate(vmast, tab) {
   }
 
   if(vmast.for && vmast.alias) {
-    beforeTag += "\n" + tab + '@foreach ( ' + toPHP(vmast.for) + ' as ' + toPHP(vmast.alias) + ' )';
+    var index = (vmast.iterator1 && toPHP(vmast.iterator1) + '=>') || '';
+    beforeTag += "\n" + tab + '@foreach ( ' + toPHP(vmast.for) + ' as ' + index + toPHP(vmast.alias) + ' )';
     afterTag += "\n" + tab + '@endforeach';
   }
 
