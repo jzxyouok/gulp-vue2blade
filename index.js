@@ -67,12 +67,14 @@ function mackTemplate(vmast, tab) {
     });
   }
 
+  vmast.tag = vmast.tag.replace(/router\-link/, 'a');
+
   var tagStartNewLine = (tab && vmast.parent && vmast.parent.tag && !isInlineTag(vmast.parent.tag)) && !isSVG(vmast.parent.tag);
   var tagEndNewLine = !isInlineTag(vmast.tag) && !isSVG(vmast.tag)
                       && (vmast.children.length > 1 || (vmast.children.length == 1 && vmast.children[0].tag));
 
   //判断标签是否为html标签
-  if(vmast.tag !== 'template' && (isHTMLTag(vmast.tag) || isSVG(vmast.tag))) {
+  if(vmast.tag !== 'template' &&  (isHTMLTag(vmast.tag) || isSVG(vmast.tag))) {
     //获取html属性，结果 ' name="abc" value="abc"'\
     for(var name in vmast.attrsMap) {
       var value = vmast.attrsMap[name];
@@ -80,6 +82,12 @@ function mackTemplate(vmast, tab) {
       if(/^(v\-bind)?\:/.test(name)) {
         name = name.replace(/^(v\-bind)?\:/, '');
         value = '{{ ' + toPHP(value) + ' }}';
+      }
+
+      if(vmast.tag === 'a') {
+        if(name === 'to') {
+          name = 'href';
+        }
       }
 
       if(!/^data\-/.test(name) && (/^(\@|v\-on\:|v\-[^bind])/.test(name) || !isAttr(name) || isObj(value))) {
@@ -208,8 +216,6 @@ function vue2blade(data, opts, appFile) {
     });
 
     template = template.replace(/<router\-view><\/router\-view>/g, '@yield(\'' + opts.routerView + '\')');
-    template = template.replace(/<router-link\s+to=/g, '<a href=');
-    template = template.replace(/<\/router-link>/g, '</a>');
 
     var vm = compiler.compile(template);
 
