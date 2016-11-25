@@ -43,7 +43,7 @@ function isObj(obj) {
 }
 
 function toPHP(code, isIf) {
-  return js2php(code).replace(/^<\?php\n|\;\n$/gm, '');
+  return js2php(code).replace(/^<\?php\n|\;\n$/gm, '').replace(/\$\$route\-\>params\-\>/g, '$').replace(/\$this\-\>\$parent\-\>/g, '$').replace(/\$this\-\>/g, '$').replace(/Number\s*\(/g, "(");
 }
 
 function mackTemplate(vmast, tab) {
@@ -156,10 +156,6 @@ function mackTemplate(vmast, tab) {
     beforeTag += "\n" + tab + '@if ( ';
     beforeTag += toPHP(vmast.if, true);
     beforeTag += ' )';
-    if(vmast.elseBlock) {
-      afterTag += mackTemplate(vmast.elseBlock, tab);
-    }
-    afterTag += "\n" + tab + '@endif';
   }
 
   if(vmast.else) {
@@ -170,6 +166,13 @@ function mackTemplate(vmast, tab) {
     var index = (vmast.iterator1 && toPHP(vmast.iterator1) + '=>') || '';
     beforeTag += "\n" + tab + '@foreach ( ' + toPHP(vmast.for) + ' as ' + index + toPHP(vmast.alias) + ' )';
     afterTag += "\n" + tab + '@endforeach';
+  }
+
+  if(vmast.if) {
+    if(vmast.elseBlock) {
+      afterTag += mackTemplate(vmast.elseBlock, tab);
+    }
+    afterTag += "\n" + tab + '@endif';
   }
 
   result = beforeTag + tagStart + childrens + tagEnd + afterTag;
@@ -183,7 +186,7 @@ function vue2blade(data, opts, appFile) {
     var extendsStart = '';
     var extendsEnd = '';
 
-    if(!appFile) {
+    if(!appFile && !opts.include) {
       extendsStart += '@extends(\'' + (opts.basedir + opts.bladeLayoutName).replace(/\//g, '.') + '\')\n';
       extendsStart += '@section(\'' + opts.routerView + '\')\n';
       extendsEnd += '\n@endsection\n';
@@ -226,10 +229,15 @@ function vue2blade(data, opts, appFile) {
 
 module.exports = function (opts) {
 
+    if(typeof opts.nolayout === 'string') {
+      opts.nolayout = [opts.nolayout];
+    }
+
     opts = objectAssign({
         routerView: 'contents',
         basedir: '',
         layout: './src/App.vue',
+        nolayout: ['./src/include'],
         bladeLayoutName: 'layouts.balde.php',
         index: './dist/index.html',
         appID: 'app'
@@ -268,9 +276,18 @@ module.exports = function (opts) {
 
         var appFile = (file.path === path.join(__dirname, '../../' + opts.layout));
 
+        var includeFile = false;
+
+        opts.nolayout.forEach(function(nolayout) {
+          var nolayoutdir = path.join(__dirname, '../../' + nolayout);
+          if(file.path.replace(nolayoutdir, '') !== file.path) {
+            includeFile = true;
+          }
+        })
+
         try {
             if(file.contents) {
-                var res = vue2blade(file.contents.toString(), opts, appFile);
+                var res = vue2blade(file.contents.toString(), opts, appFile || includeFile);
                 file.contents = new Buffer(res);
                 file.path = gutil.replaceExtension(file.path.toLowerCase(), '.blade.php');
                 if(appFile && indexSource) {

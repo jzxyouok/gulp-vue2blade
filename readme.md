@@ -27,6 +27,7 @@ gulp.task('vue', function() {
         routerView: 'contents',
         basedir: '',
         layout: './src/App.vue',
+        nolayout: ['./src/include'],
         bladeLayoutName: 'layouts.balde.php',
         index: './dist/index.html',
         appID: 'app'
