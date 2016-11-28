@@ -1,5 +1,5 @@
 'use strict';
-var compiler = require('vue-template-compiler')
+var compiler = require('./build');
 
 var path = require('path');
 
@@ -158,6 +158,12 @@ function mackTemplate(vmast, tab) {
     beforeTag += ' )';
   }
 
+  if(vmast.elseif) {
+    beforeTag += "\n" + tab + '@elseif ( ';
+    beforeTag += toPHP(vmast.elseif, true);
+    beforeTag += ' )';
+  }
+
   if(vmast.else) {
     beforeTag += "\n" + tab + '@else';
   }
@@ -169,6 +175,9 @@ function mackTemplate(vmast, tab) {
   }
 
   if(vmast.if) {
+    if(vmast.elseIfBlock) {
+      afterTag += mackTemplate(vmast.elseIfBlock, tab);
+    }
     if(vmast.elseBlock) {
       afterTag += mackTemplate(vmast.elseBlock, tab);
     }
