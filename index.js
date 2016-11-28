@@ -43,7 +43,13 @@ function isObj(obj) {
 }
 
 function toPHP(code, isIf) {
-  return js2php(code).replace(/^<\?php\n|\;\n$/gm, '').replace(/\$\$route\-\>params\-\>/g, '$').replace(/\$this\-\>\$parent\-\>/g, '$').replace(/\$this\-\>/g, '$').replace(/Number\s*\(/g, "(");
+  return js2php(code)
+  .replace(/^<\?php\n|\;\n$/gm, '')
+  .replace(/\$\$route\-\>params\-\>/g, '$')
+  .replace(/\$this\-\>\$parent\-\>/g, '$')
+  .replace(/\$this\-\>\$root\-\>/g, '$')
+  .replace(/\$this\-\>/g, '$')
+  .replace(/Number\s*\(/g, "(");
 }
 
 function mackTemplate(vmast, tab) {
